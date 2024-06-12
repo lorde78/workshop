@@ -1,46 +1,81 @@
-import React from "react";
-import { useForm } from "react-hook-form";
-import { valibotResolver } from "@hookform/resolvers/valibot";
-import userSchema from "../validation/userSchema";
+import React, { useState } from "react";
+import { safeParse } from "valibot";
+import * as v from "valibot";
 
-interface FormInput {
-	username: string;
+const FormSchema = v.object({
+	email: v.pipe(
+		v.string("Your email must be a string."),
+		v.nonEmpty("Please enter your email."),
+		v.email("The email address is badly formatted.")
+	),
+	password: v.pipe(
+		v.string("Your password must be a string."),
+		v.nonEmpty("Please enter your password."),
+		v.minLength(8, "Your password must have 8 characters or more.")
+	),
+});
+
+type FormInputs = {
 	email: string;
 	password: string;
-}
+};
 
-const Form: React.FC = () => {
-	const {
-		register,
-		handleSubmit,
-		formState: { errors },
-	} = useForm<FormInput>({
-		resolver: valibotResolver(userSchema),
+const Form = () => {
+	const [formData, setFormData] = useState<FormInputs>({
+		email: "",
+		password: "",
 	});
 
-	const onSubmit = (data: FormInput) => {
-		console.log(data);
+	const [isSubmitted, setIsSubmitted] = useState(false);
+	const [submissionError, setSubmissionError] = useState<string>();
+
+	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		setFormData({ ...formData, [e.target.name]: e.target.value });
+	};
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		const result = safeParse(FormSchema, formData);
+		if (result.success) {
+			setIsSubmitted(true);
+		} else {
+			const fieldErrors: { [key in keyof FormInputs]?: string } = {};
+
+			setSubmissionError("Failed to submit the form");
+		}
 	};
 
 	return (
-		<form onSubmit={handleSubmit(onSubmit)}>
-			<div>
-				<label>Username</label>
-				<input {...register("username")} />
-				{errors.username && <p>{errors.username.message}</p>}
-			</div>
-			<div>
-				<label>Email</label>
-				<input {...register("email")} />
-				{errors.email && <p>{errors.email.message}</p>}
-			</div>
-			<div>
-				<label>Password</label>
-				<input type="password" {...register("password")} />
-				{errors.password && <p>{errors.password.message}</p>}
-			</div>
-			<button type="submit">Submit</button>
-		</form>
+		<div>
+			{isSubmitted && <p>Form submitted successfully!</p>}
+			{submissionError && <p>{submissionError}</p>}
+
+			<form onSubmit={handleSubmit}>
+				<div>
+					<label>Email</label>
+					<input
+						className="input"
+						name="email"
+						type="email"
+						value={formData.email}
+						onChange={handleChange}
+					/>
+				</div>
+
+				<div>
+					<label>Password</label>
+					<input
+						className="input"
+						name="password"
+						type="password"
+						value={formData.password}
+						onChange={handleChange}
+					/>
+				</div>
+
+				<input type="submit" />
+			</form>
+		</div>
 	);
 };
 
